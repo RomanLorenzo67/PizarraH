@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizarron de Henco</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5 columnas */
+            gap: 20px; /* Espaciado */
+            justify-content: center;
+        }
+        .table {
+            width: 220px;
+            height: 300px;
+            border: 2px solid black;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 10px;
+            transition: background-color 0.5s ease; /* Suaviza el cambio de color */
+        }
+        .table-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 50px;
+            resize: none;
+        }
+        button {
+            width: 48%;
+            padding: 5px;
+            font-size: 14px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .time-controls {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 5px;
+        }
+        .legend {
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .legend span {
+            font-weight: bold;
+        }
+        .green {
+            color: green;
+        }
+        .yellow {
+            color: goldenrod;
+        }
+        .red {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">PIZARRON DE HENCO</h1>
+    <div class="legend">
+        <span class="green">Verde:</span> 0 - 3:30 horas; 
+        <span class="yellow">Amarillo:</span> 3:30 - 4:00 horas; 
+        <span class="red">Rojo:</span> +4:00 horas
+    </div>
+    <div class="container" id="table-container">
+        <!-- Las tablas se generan dinámicamente con JavaScript -->
+    </div>
+    <script>
+        // Configuración de tiempos en milisegundos
+        const GREEN_LIMIT = 3.5 * 60 * 60 * 1000; // 3:30 horas
+        const YELLOW_LIMIT = 4 * 60 * 60 * 1000; // 4 horas
+
+        const tables = [];
+        const container = document.getElementById("table-container");
+
+        // Crear las 10 tablas dinámicamente
+        for (let i = 1; i <= 10; i++) {
+            const table = document.createElement("div");
+            table.classList.add("table");
+            table.id = `table-${i}`;
+            table.innerHTML = `
+                <div class="table-title">Muelle ${i}</div>
+                <div>ECO:
+                    <input type="text" placeholder="Escribe aquí...">
+                </div>
+                <div>VIAJE:
+                    <input type="text" placeholder="Escribe aquí...">
+                </div>
+                <div>OPERACIÓN:
+                    <select>
+                        <option value="carga">CARGA</option>
+                        <option value="descarga">DESCARGA</option>
+                        <option value="devolucion">DEVOLUCIÓN</option>
+                    </select>
+                </div>
+                <div>TIME:
+                    <div class="time-controls">
+                        <button id="start-${i}" onclick="startTimer(${i})">Iniciar</button>
+                        <button id="reset-${i}" onclick="resetTimer(${i})">Reiniciar</button>
+                    </div>
+                    <span id="timer-${i}">00:00:00</span>
+                </div>
+                <div>COMENTARIOS:
+                    <textarea placeholder="Escribe aquí..."></textarea>
+                </div>
+            `;
+            container.appendChild(table);
+            tables.push({ id: i, timeElapsed: 0, interval: null });
+        }
+
+        // Función para convertir milisegundos a formato hh:mm:ss
+        function formatTime(ms) {
+            const hours = String(Math.floor(ms / (60 * 60 * 1000))).padStart(2, "0");
+            const minutes = String(Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000))).padStart(2, "0");
+            const seconds = String(Math.floor((ms % (60 * 1000)) / 1000)).padStart(2, "0");
+            return `${hours}:${minutes}:${seconds}`;
+        }
+
+        // Función para iniciar o pausar el cronómetro
+        function startTimer(id) {
+            const table = tables.find(t => t.id === id);
+            const timerSpan = document.getElementById(`timer-${id}`);
+            const tableElement = document.getElementById(`table-${id}`);
+            const button = document.getElementById(`start-${id}`);
+
+            if (table.interval) {
+                // Si ya hay un cronómetro activo, detenerlo
+                clearInterval(table.interval);
+                table.interval = null;
+                button.textContent = "Iniciar";
+            } else {
+                // Iniciar el cronómetro
+                const startTime = Date.now() - table.timeElapsed;
+                button.textContent = "Pausar";
+                table.interval = setInterval(() => {
+                    table.timeElapsed = Date.now() - startTime;
+                    timerSpan.textContent = formatTime(table.timeElapsed);
+
+                    // Cambiar el color según el tiempo transcurrido
+                    if (table.timeElapsed < GREEN_LIMIT) {
+                        tableElement.style.backgroundColor = "green";
+                    } else if (table.timeElapsed < YELLOW_LIMIT) {
+                        tableElement.style.backgroundColor = "yellow";
+                    } else {
+                        tableElement.style.backgroundColor = "red";
+                    }
+                }, 1000);
+            }
+        }
+
+        // Función para reiniciar el cronómetro
+        function resetTimer(id) {
+            const table = tables.find(t => t.id === id);
+            const timerSpan = document.getElementById(`timer-${id}`);
+            const tableElement = document.getElementById(`table-${id}`);
+            const button = document.getElementById(`start-${id}`);
+
+            // Detener el cronómetro si está activo
+            if (table.interval) {
+                clearInterval(table.interval);
+                table.interval = null;
+            }
+
+            // Reiniciar valores
+            table.timeElapsed = 0;
+            timerSpan.textContent = "00:00:00";
+            tableElement.style.backgroundColor = ""; // Restablecer color
+            button.textContent = "Iniciar";
+        }
+    </script>
+</body>
+</html>
